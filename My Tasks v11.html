@@ -1,0 +1,2695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TaskFlow · Personal Task Manager</title>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
+    </script>
+
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+
+    <style>
+        /* ───────────── RESET & BASE ───────────── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        :root {
+            --primary: #0D6EFD;
+            --secondary: #4A90E2;
+            --accent: #1E4DB7;
+            --bg: #F5F9FF;
+            --bg-card: #ffffff;
+            --text: #1F2937;
+            --text-muted: #6B7280;
+            --border: #E5E9F0;
+            --shadow: 0 4px 20px rgba(13, 110, 253, 0.08);
+            --radius: 14px;
+            --radius-sm: 8px;
+            --transition: 0.25s ease;
+            --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        html {
+            font-size: 16px;
+            scroll-behavior: smooth;
+        }
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        button {
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+        input,
+        select,
+        textarea {
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        /* ───────────── SCROLLBAR ───────────── */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--secondary);
+            border-radius: 8px;
+        }
+
+        /* ───────────── HEADER / NAV ───────────── */
+        .app-header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            height: 68px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+        }
+        .app-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 1.35rem;
+            color: var(--primary);
+        }
+        .app-brand i {
+            font-size: 1.6rem;
+            color: var(--primary);
+        }
+        .app-brand span {
+            color: var(--text);
+        }
+        .nav-tabs {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .nav-tab {
+            padding: 0.5rem 1.2rem;
+            border-radius: 40px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nav-tab i {
+            font-size: 1rem;
+        }
+        .nav-tab:hover {
+            background: rgba(13, 110, 253, 0.06);
+            color: var(--primary);
+        }
+        .nav-tab.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.25);
+        }
+        .nav-tab.active i {
+            color: #fff;
+        }
+
+        /* ───────────── LAYOUT ───────────── */
+        .app-main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1440px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .page {
+            display: none;
+            animation: fadeUp 0.3s ease;
+        }
+        .page.active {
+            display: block;
+        }
+        @keyframes fadeUp {
+            0% {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ───────────── CARDS ───────────── */
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            padding: 1.5rem 1.75rem;
+            transition: var(--transition);
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .card-title i {
+            color: var(--primary);
+        }
+
+        /* ───────────── BUTTONS ───────────── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0.55rem 1.3rem;
+            border-radius: 40px;
+            border: none;
+            font-weight: 500;
+            transition: var(--transition);
+            background: var(--bg);
+            color: var(--text);
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: var(--accent);
+            box-shadow: 0 4px 14px rgba(13, 110, 253, 0.3);
+            transform: translateY(-1px);
+        }
+        .btn-secondary {
+            background: var(--secondary);
+            color: #fff;
+        }
+        .btn-secondary:hover {
+            background: #3a7bc8;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1.5px solid var(--border);
+        }
+        .btn-outline:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .btn-danger {
+            background: #EF4444;
+            color: #fff;
+        }
+        .btn-danger:hover {
+            background: #DC2626;
+        }
+        .btn-success {
+            background: #10B981;
+            color: #fff;
+        }
+        .btn-success:hover {
+            background: #059669;
+        }
+        .btn-sm {
+            padding: 0.35rem 0.9rem;
+            font-size: 0.8rem;
+        }
+        .btn-xs {
+            padding: 0.2rem 0.7rem;
+            font-size: 0.75rem;
+        }
+
+        /* ───────────── GRID ───────────── */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1.5rem;
+        }
+        .grid-4 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 1.5rem;
+        }
+        .grid-2-1 {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        /* ───────────── FORMS ───────────── */
+        .form-group {
+            margin-bottom: 1.1rem;
+        }
+        .form-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.3rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .form-control {
+            width: 100%;
+            padding: 0.6rem 0.9rem;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg);
+            transition: var(--transition);
+            color: var(--text);
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.12);
+            background: #fff;
+        }
+        .form-control-sm {
+            padding: 0.4rem 0.7rem;
+            font-size: 0.85rem;
+        }
+        textarea.form-control {
+            resize: vertical;
+            min-height: 70px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .form-row-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
+        }
+
+        /* ───────────── TABLE ───────────── */
+        .table-wrap {
+            overflow-x: auto;
+            margin-top: 0.5rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        th {
+            text-align: left;
+            padding: 0.7rem 0.8rem;
+            background: var(--bg);
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 2px solid var(--border);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        td {
+            padding: 0.7rem 0.8rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        tr:hover td {
+            background: rgba(13, 110, 253, 0.02);
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.7rem;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: var(--bg);
+            color: var(--text-muted);
+        }
+        .badge-primary {
+            background: rgba(13, 110, 253, 0.12);
+            color: var(--primary);
+        }
+        .badge-success {
+            background: rgba(16, 185, 129, 0.12);
+            color: #10B981;
+        }
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.12);
+            color: #F59E0B;
+        }
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.12);
+            color: #EF4444;
+        }
+        .badge-info {
+            background: rgba(59, 130, 246, 0.12);
+            color: #3B82F6;
+        }
+
+        /* Progress bar */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9edf4;
+            border-radius: 20px;
+            overflow: hidden;
+            display: inline-block;
+            min-width: 60px;
+        }
+        .progress-bar .fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 20px;
+            transition: width 0.3s ease;
+        }
+        .progress-bar .fill.complete {
+            background: #10B981;
+        }
+
+        /* ───────────── STAT CARDS ───────────── */
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 1.2rem 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 0.25rem;
+        }
+        .stat-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .stat-value .sub {
+            font-size: 0.7rem;
+            font-weight: 400;
+            color: var(--text-muted);
+            display: inline-block;
+            margin-left: 2px;
+        }
+        .stat-value .divider {
+            margin: 0 4px;
+            color: var(--text-muted);
+            font-weight: 300;
+        }
+
+        /* ───────────── DASHBOARD SPECIFIC ───────────── */
+        .dashboard-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+        .dashboard-controls .btn-group {
+            display: flex;
+            gap: 4px;
+        }
+        .date-nav-btn {
+            padding: 0.4rem 0.9rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-card);
+            transition: var(--transition);
+        }
+        .date-nav-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .chart-container {
+            position: relative;
+            height: 220px;
+        }
+        .chart-container-sm {
+            height: 180px;
+        }
+
+        /* ───────────── MODAL ───────────── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            padding: 1.5rem;
+        }
+        .modal-overlay.open {
+            display: flex;
+        }
+        .modal-box {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            max-width: 620px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 2rem 2.2rem;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
+            animation: modalIn 0.25s ease;
+        }
+        @keyframes modalIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.96) translateY(16px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+        .modal-header h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            padding: 0 0.3rem;
+            transition: var(--transition);
+        }
+        .modal-close:hover {
+            color: var(--text);
+            transform: rotate(90deg);
+        }
+
+        /* ───────────── REPORTS ───────────── */
+        .report-preview {
+            background: var(--bg);
+            border-radius: var(--radius-sm);
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            font-size: 0.9rem;
+            max-height: 800px;
+            overflow-y: auto;
+        }
+        .report-preview .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .report-preview .stat-item {
+            background: #fff;
+            padding: 0.8rem 1rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+        .report-preview .stat-item .label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.3px;
+        }
+        .report-preview .stat-item .value {
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+        .report-preview .chart-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .report-preview .chart-box {
+            background: #fff;
+            padding: 0.75rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            height: 200px;
+            position: relative;
+        }
+        .report-preview .chart-box canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        .report-preview .task-summary-table {
+            margin-top: 1rem;
+        }
+        .report-preview .task-summary-table table {
+            font-size: 0.85rem;
+        }
+        .report-preview .task-summary-table th {
+            background: #e9edf4;
+        }
+        .report-preview .report-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 0.2rem;
+            color: var(--text);
+        }
+        .report-preview .report-subtitle {
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        /* ───────────── SETTINGS ───────────── */
+        .settings-group {
+            margin-bottom: 2rem;
+        }
+        .settings-group h4 {
+            margin-bottom: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.3rem;
+        }
+        .tag-item {
+            background: var(--bg);
+            padding: 0.2rem 1rem;
+            border-radius: 40px;
+            border: 1px solid var(--border);
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .tag-item .remove-tag {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            cursor: pointer;
+            padding: 0 2px;
+        }
+        .tag-item .remove-tag:hover {
+            color: #EF4444;
+        }
+
+        /* ───────────── EMPTY STATE ───────────── */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+        .empty-state i {
+            font-size: 3rem;
+            color: var(--border);
+            margin-bottom: 0.8rem;
+        }
+        .empty-state p {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        /* ───────────── RESPONSIVE ───────────── */
+        @media (max-width: 1024px) {
+            .grid-4 {
+                grid-template-columns: 1fr 1fr;
+            }
+            .grid-2-1 {
+                grid-template-columns: 1fr;
+            }
+            .report-preview .chart-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 768px) {
+            .app-header {
+                padding: 0 1rem;
+                height: auto;
+                flex-wrap: wrap;
+                padding-top: 0.6rem;
+                padding-bottom: 0.6rem;
+                gap: 0.5rem;
+            }
+            .app-main {
+                padding: 1rem;
+            }
+            .grid-2,
+            .grid-3,
+            .grid-4 {
+                grid-template-columns: 1fr;
+            }
+            .form-row,
+            .form-row-3 {
+                grid-template-columns: 1fr;
+            }
+            .modal-box {
+                padding: 1.5rem;
+            }
+            .nav-tab {
+                padding: 0.35rem 0.8rem;
+                font-size: 0.8rem;
+            }
+            .nav-tab span {
+                display: none;
+            }
+            .dashboard-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .stat-value {
+                font-size: 1.4rem;
+            }
+            .report-preview .chart-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 480px) {
+            .app-brand {
+                font-size: 1.1rem;
+            }
+            .app-brand i {
+                font-size: 1.3rem;
+            }
+            .card {
+                padding: 1rem;
+            }
+        }
+
+        /* ───────────── UTILITY ───────────── */
+        .text-muted {
+            color: var(--text-muted);
+        }
+        .text-center {
+            text-align: center;
+        }
+        .mt-1 {
+            margin-top: 0.75rem;
+        }
+        .mt-2 {
+            margin-top: 1.5rem;
+        }
+        .mb-1 {
+            margin-bottom: 0.75rem;
+        }
+        .mb-2 {
+            margin-bottom: 1.5rem;
+        }
+        .flex {
+            display: flex;
+        }
+        .flex-between {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .gap-1 {
+            gap: 0.5rem;
+        }
+        .gap-2 {
+            gap: 1rem;
+        }
+        .flex-wrap {
+            flex-wrap: wrap;
+        }
+        .w-full {
+            width: 100%;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ─── HEADER ─── -->
+    <header class="app-header">
+        <div class="app-brand">
+            <i class="fas fa-tasks"></i>
+            Task<span>Flow</span>
+        </div>
+        <nav class="nav-tabs" id="navTabs">
+            <button class="nav-tab active" data-page="dashboard"><i class="fas fa-chart-pie"></i> <span>Dashboard</span></button>
+            <button class="nav-tab" data-page="tasks"><i class="fas fa-list-check"></i> <span>Tasks</span></button>
+            <button class="nav-tab" data-page="logs"><i class="fas fa-clock"></i> <span>Logs</span></button>
+            <button class="nav-tab" data-page="reports"><i class="fas fa-file-alt"></i> <span>Reports</span></button>
+            <button class="nav-tab" data-page="settings"><i class="fas fa-sliders-h"></i> <span>Settings</span></button>
+        </nav>
+    </header>
+
+    <!-- ─── MAIN ─── -->
+    <main class="app-main">
+
+        <!-- ═══ DASHBOARD ═══ -->
+        <section class="page active" id="page-dashboard">
+            <div class="dashboard-controls">
+                <div class="flex gap-1 flex-wrap">
+                    <button class="date-nav-btn" id="dashPrevDay"><i class="fas fa-chevron-left"></i></button>
+                    <input type="date" id="dashDate" class="form-control form-control-sm" style="width:160px;" />
+                    <button class="date-nav-btn" id="dashNextDay"><i class="fas fa-chevron-right"></i></button>
+                    <button class="btn btn-sm btn-outline" id="dashToday"><i class="fas fa-calendar-day"></i> Today</button>
+                </div>
+                <div class="flex gap-1 flex-wrap">
+                    <select id="dashTaskTypeFilter" class="form-control form-control-sm" style="width:140px;">
+                        <option value="">All Types</option>
+                    </select>
+                    <select id="dashStatusFilter" class="form-control form-control-sm" style="width:140px;">
+                        <option value="">All Statuses</option>
+                    </select>
+                    <button class="btn btn-sm btn-primary" id="dashRefresh"><i class="fas fa-sync-alt"></i> Refresh</button>
+                </div>
+            </div>
+
+            <!-- Stat Cards -->
+            <div class="grid-4 mb-2" id="dashStats">
+                <div class="stat-card">
+                    <div class="stat-label">Total Tasks Open</div>
+                    <div class="stat-value" id="statOpenTasks">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Tasks Added</div>
+                    <div class="stat-value">
+                        <span id="statTasksAddedToday">0</span> <span class="sub">today</span>
+                        <span class="divider">/</span>
+                        <span id="statTasksAddedWeek">0</span> <span class="sub">week</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Tasks Completed</div>
+                    <div class="stat-value">
+                        <span id="statCompletedToday">0</span> <span class="sub">today</span>
+                        <span class="divider">/</span>
+                        <span id="statCompletedWeek">0</span> <span class="sub">week</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Activities Logged</div>
+                    <div class="stat-value">
+                        <span id="statLogsToday">0</span> <span class="sub">today</span>
+                        <span class="divider">/</span>
+                        <span id="statLogsWeek">0</span> <span class="sub">week</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="grid-2 mb-2">
+                <div class="card">
+                    <div class="card-header"><span class="card-title"><i class="fas fa-chart-bar"></i> Hours by Task (Today)</span></div>
+                    <div class="chart-container"><canvas id="chartHoursByTaskToday"></canvas></div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span class="card-title"><i class="fas fa-chart-bar"></i> Hours by Task (Week to Date)</span></div>
+                    <div class="chart-container"><canvas id="chartHoursByTaskWeek"></canvas></div>
+                </div>
+            </div>
+            <div class="grid-2 mb-2">
+                <div class="card">
+                    <div class="card-header"><span class="card-title"><i class="fas fa-chart-pie"></i> Task Status Distribution</span></div>
+                    <div class="chart-container"><canvas id="chartStatusDist"></canvas></div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span class="card-title"><i class="fas fa-chart-line"></i> Daily Hours Trend</span></div>
+                    <div class="chart-container"><canvas id="chartDailyTrend"></canvas></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header"><span class="card-title"><i class="fas fa-balance-scale"></i> Planned vs Actual</span></div>
+                <div class="chart-container" style="height:220px;"><canvas id="chartEffort"></canvas></div>
+            </div>
+
+            <!-- Daily Activity Table -->
+            <div class="card mt-2">
+                <div class="card-header">
+                    <span class="card-title"><i class="fas fa-list-ul"></i> Daily Activities</span>
+                    <span id="dashDailyDate" class="text-muted" style="font-size:0.85rem;"></span>
+                </div>
+                <div class="table-wrap" id="dashDailyTableWrap">
+                    <p class="text-muted" style="padding:0.5rem 0;">Select a date to view activities.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ TASKS ═══ -->
+        <section class="page" id="page-tasks">
+            <div class="flex-between flex-wrap gap-1 mb-2">
+                <h2 style="font-weight:600;"><i class="fas fa-list-check" style="color:var(--primary);"></i> Tasks</h2>
+                <div class="flex gap-2 flex-wrap">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:0.9rem;cursor:pointer;">
+                        <input type="checkbox" id="showCompletedCancelled" />
+                        Show Completed / Cancelled
+                    </label>
+                    <button class="btn btn-primary" id="taskCreateBtn"><i class="fas fa-plus"></i> New Task</button>
+                </div>
+            </div>
+            <div class="card">
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr>
+                                <th>ID</th>
+                                <th>Description</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Est. Hours</th>
+                                <th>Logs</th>
+                                <th>% Complete</th>
+                                <th>Start</th>
+                                <th>End</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr></thead>
+                        <tbody id="taskTableBody">
+                            <tr><td colspan="10" class="text-center text-muted" style="padding:2rem 0;">No tasks yet. Create your first task!</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ LOGS ═══ -->
+        <section class="page" id="page-logs">
+            <div class="flex-between flex-wrap gap-1 mb-2">
+                <h2 style="font-weight:600;"><i class="fas fa-clock" style="color:var(--primary);"></i> Task Logs</h2>
+                <button class="btn btn-primary" id="logCreateBtn"><i class="fas fa-plus"></i> New Log</button>
+            </div>
+            <div class="card">
+                <div class="flex gap-1 flex-wrap mb-1">
+                    <select id="logTaskFilter" class="form-control form-control-sm" style="width:250px;">
+                        <option value="">All Tasks</option>
+                    </select>
+                    <input type="date" id="logDateFilter" class="form-control form-control-sm" style="width:160px;" />
+                    <button class="btn btn-sm btn-primary" id="logFilterBtn"><i class="fas fa-filter"></i> Apply Filters</button>
+                    <button class="btn btn-sm btn-outline" id="logClearFilter"><i class="fas fa-times"></i> Clear</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr>
+                                <th>Log ID</th>
+                                <th>Task</th>
+                                <th>Date</th>
+                                <th>Activity</th>
+                                <th>Time</th>
+                                <th>Notes</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr></thead>
+                        <tbody id="logTableBody">
+                            <tr><td colspan="7" class="text-center text-muted" style="padding:2rem 0;">No logs yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ REPORTS ═══ -->
+        <section class="page" id="page-reports">
+            <h2 style="font-weight:600; margin-bottom:1.5rem;"><i class="fas fa-file-alt" style="color:var(--primary);"></i> Reports</h2>
+
+            <!-- Report Controls -->
+            <div class="card mb-2">
+                <div class="card-header"><span class="card-title"><i class="fas fa-calendar-alt"></i> Report Period</span></div>
+                <div class="form-group">
+                    <label class="form-label">Report Type</label>
+                    <select id="reportType" class="form-control">
+                        <option value="day">Single Day</option>
+                        <option value="week" selected>Week-to-Date</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+                <div id="reportDateControls">
+                    <!-- Single Day -->
+                    <div class="form-group hidden" id="reportSingleDay">
+                        <label class="form-label">Date</label>
+                        <input type="date" id="reportDate" class="form-control" />
+                    </div>
+                    <!-- Week-to-Date -->
+                    <div class="form-group" id="reportWeekInfo">
+                        <label class="form-label">Week Range</label>
+                        <span id="reportWeekRange" class="form-control" style="background:#f0f2f5;"></span>
+                    </div>
+                    <!-- Custom Range -->
+                    <div class="form-group hidden" id="reportCustomRange">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Start Date</label>
+                                <input type="date" id="reportStartDate" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">End Date</label>
+                                <input type="date" id="reportEndDate" class="form-control" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="reportGenerateBtn"><i class="fas fa-sync-alt"></i> Generate Report</button>
+                <button class="btn btn-secondary" id="reportPdfBtn" style="margin-left:0.5rem;"><i class="fas fa-file-pdf"></i> Print / PDF</button>
+                <button class="btn btn-outline" id="reportHtmlBtn"><i class="fas fa-code"></i> HTML Export</button>
+            </div>
+
+            <!-- Report Preview -->
+            <div class="card">
+                <div class="card-header"><span class="card-title"><i class="fas fa-eye"></i> Report Preview</span></div>
+                <div class="report-preview" id="reportPreview">
+                    <p class="text-muted">Select a period and click "Generate Report".</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ SETTINGS ═══ -->
+        <section class="page" id="page-settings">
+            <h2 style="font-weight:600; margin-bottom:1.5rem;"><i class="fas fa-sliders-h" style="color:var(--primary);"></i> Settings</h2>
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header"><span class="card-title"><i class="fas fa-tags"></i> Task Statuses</span></div>
+                    <div class="form-group">
+                        <label class="form-label">Add new status</label>
+                        <div class="flex gap-1">
+                            <input type="text" id="newStatusInput" class="form-control" placeholder="e.g. Review" />
+                            <button class="btn btn-sm btn-primary" id="addStatusBtn">Add</button>
+                        </div>
+                    </div>
+                    <div class="tag-list" id="statusTagList"></div>
+                    <button class="btn btn-sm btn-outline mt-1" id="resetDefaultStatuses"><i class="fas fa-undo"></i> Reset Defaults</button>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span class="card-title"><i class="fas fa-tag"></i> Task Types</span></div>
+                    <div class="form-group">
+                        <label class="form-label">Add new type</label>
+                        <div class="flex gap-1">
+                            <input type="text" id="newTypeInput" class="form-control" placeholder="e.g. Design" />
+                            <button class="btn btn-sm btn-primary" id="addTypeBtn">Add</button>
+                        </div>
+                    </div>
+                    <div class="tag-list" id="typeTagList"></div>
+                    <button class="btn btn-sm btn-outline mt-1" id="resetDefaultTypes"><i class="fas fa-undo"></i> Reset Defaults</button>
+                </div>
+            </div>
+            <div class="card mt-2">
+                <div class="card-header"><span class="card-title"><i class="fas fa-database"></i> Data Management</span></div>
+                <div class="flex gap-2 flex-wrap">
+                    <button class="btn btn-secondary" id="exportXmlBtn"><i class="fas fa-download"></i> Export All XML</button>
+                    <button class="btn btn-outline" id="importXmlBtn"><i class="fas fa-upload"></i> Import XML</button>
+                    <input type="file" id="importXmlFile" accept=".xml" style="display:none;" />
+                    <button class="btn btn-danger" id="clearAllDataBtn"><i class="fas fa-trash-alt"></i> Clear All Data</button>
+                </div>
+                <p class="text-muted mt-1" style="font-size:0.8rem;">Data is stored per week in XML format. Export to backup or transfer.</p>
+            </div>
+            <div class="card mt-2">
+                <div class="card-header"><span class="card-title"><i class="fas fa-clock"></i> Working Hours</span></div>
+                <div class="grid-2" id="workingHoursGrid"></div>
+                <button class="btn btn-sm btn-primary mt-1" id="saveWorkingHours"><i class="fas fa-save"></i> Save Working Hours</button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ─── MODAL ─── -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-box" id="modalBox">
+            <div class="modal-header">
+                <h3 id="modalTitle">Modal</h3>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- ─── JAVASCRIPT ─── -->
+    <script>
+        /* ═══════════════════════════════════════════════════════════════
+           TASKFLOW — Full Application
+           ═══════════════════════════════════════════════════════════════ */
+
+        // ─── CONFIGURATION ───
+        const DEFAULTS = {
+            taskStatus: ['Not Started', 'In Progress', 'Blocked', 'Completed', 'Cancelled'],
+            taskTypes: ['Development', 'Support', 'Project', 'Administration', 'Meeting', 'Training'],
+            workingHours: {
+                Monday: { start: '08:00', end: '16:30' },
+                Tuesday: { start: '08:00', end: '16:30' },
+                Wednesday: { start: '08:00', end: '16:30' },
+                Thursday: { start: '08:00', end: '16:30' },
+                Friday: { start: '08:00', end: '14:00' },
+                Saturday: { start: '', end: '' },
+                Sunday: { start: '', end: '' }
+            }
+        };
+
+        let config = loadConfig();
+
+        function loadConfig() {
+            try {
+                const raw = localStorage.getItem('taskflow_config');
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    return {
+                        taskStatus: parsed.taskStatus || [...DEFAULTS.taskStatus],
+                        taskTypes: parsed.taskTypes || [...DEFAULTS.taskTypes],
+                        workingHours: parsed.workingHours ? { ...DEFAULTS.workingHours, ...parsed.workingHours } : { ...
+                            DEFAULTS.workingHours }
+                    };
+                }
+            } catch (_) { /* ignore */ }
+            return JSON.parse(JSON.stringify(DEFAULTS));
+        }
+
+        function saveConfig() {
+            localStorage.setItem('taskflow_config', JSON.stringify(config));
+        }
+
+        // ─── DATA MANAGER (XML in localStorage) ───
+        function getWeekKey(date) {
+            const d = new Date(date);
+            const year = d.getFullYear();
+            const jan1 = new Date(year, 0, 1);
+            const days = Math.floor((d - jan1) / 86400000);
+            const week = Math.ceil((days + jan1.getDay() + 1) / 7);
+            return `${year}-W${String(week).padStart(2,'0')}`;
+        }
+
+        function getCurrentWeek() {
+            return getWeekKey(new Date());
+        }
+
+        function getWeekStart(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = (day === 0 ? 6 : day - 1);
+            d.setDate(d.getDate() - diff);
+            d.setHours(0, 0, 0, 0);
+            return d;
+        }
+
+        function getWeekEnd(date) {
+            const start = getWeekStart(date);
+            const end = new Date(start);
+            end.setDate(end.getDate() + 6);
+            end.setHours(23, 59, 59, 999);
+            return end;
+        }
+
+        function loadXmlData(weekKey, type) {
+            const key = `taskflow_${weekKey}_${type}`;
+            const raw = localStorage.getItem(key);
+            if (!raw) return null;
+            try {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(raw, 'text/xml');
+                if (doc.querySelector('parsererror')) return null;
+                return doc;
+            } catch (_) { return null; }
+        }
+
+        function saveXmlData(weekKey, type, doc) {
+            const serializer = new XMLSerializer();
+            const xml = serializer.serializeToString(doc);
+            localStorage.setItem(`taskflow_${weekKey}_${type}`, xml);
+        }
+
+        function ensureWeekData(weekKey) {
+            if (!loadXmlData(weekKey, 'Tasks')) {
+                const doc = document.implementation.createDocument(null, 'Tasks', null);
+                const root = doc.documentElement;
+                root.appendChild(doc.createElement('Task'));
+                saveXmlData(weekKey, 'Tasks', doc);
+            }
+            if (!loadXmlData(weekKey, 'TaskLogs')) {
+                const doc = document.implementation.createDocument(null, 'TaskLogs', null);
+                const root = doc.documentElement;
+                root.appendChild(doc.createElement('TaskLog'));
+                saveXmlData(weekKey, 'TaskLogs', doc);
+            }
+        }
+
+        function getTasks(weekKey) {
+            const doc = loadXmlData(weekKey, 'Tasks');
+            if (!doc) return [];
+            const nodes = doc.querySelectorAll('Task');
+            const tasks = [];
+            nodes.forEach(node => {
+                const get = (tag) => node.querySelector(tag)?.textContent?.trim() || '';
+                const id = parseInt(get('TaskID')) || 0;
+                if (id === 0) return;
+                tasks.push({
+                    TaskID: id,
+                    TaskDescription: get('TaskDescription'),
+                    EstimatedEffortHours: parseFloat(get('EstimatedEffortHours')) || 0,
+                    StartDate: get('StartDate'),
+                    EndDate: get('EndDate'),
+                    Status: get('Status'),
+                    TaskType: get('TaskType'),
+                    RequestedBy: get('RequestedBy'),
+                    Notes: get('Notes'),
+                    CompletePercent: parseFloat(get('CompletePercent')) || -1,
+                    _week: weekKey
+                });
+            });
+            return tasks.sort((a, b) => a.TaskID - b.TaskID);
+        }
+
+        function getTaskById(id, weekKey) {
+            const tasks = getTasks(weekKey);
+            return tasks.find(t => t.TaskID === id) || null;
+        }
+
+        function getAllWeeks() {
+            const keys = Object.keys(localStorage).filter(k => k.startsWith('taskflow_') && k.endsWith('_Tasks'));
+            const weeks = keys.map(k => k.replace('taskflow_', '').replace('_Tasks', ''));
+            return [...new Set(weeks)].sort();
+        }
+
+        function getMaxTaskId(weekKey) {
+            const tasks = getTasks(weekKey);
+            if (tasks.length === 0) return 0;
+            return Math.max(...tasks.map(t => t.TaskID));
+        }
+
+        function saveTasks(weekKey, tasks) {
+            const doc = document.implementation.createDocument(null, 'Tasks', null);
+            const root = doc.documentElement;
+            tasks.forEach(t => {
+                const el = doc.createElement('Task');
+                [
+                    'TaskID', 'TaskDescription', 'EstimatedEffortHours',
+                    'StartDate', 'EndDate', 'Status', 'TaskType',
+                    'RequestedBy', 'Notes', 'CompletePercent'
+                ].forEach(field => {
+                    const child = doc.createElement(field);
+                    child.textContent = t[field] !== undefined && t[field] !== null ? String(t[field]) : '';
+                    el.appendChild(child);
+                });
+                root.appendChild(el);
+            });
+            saveXmlData(weekKey, 'Tasks', doc);
+        }
+
+        function getLogs(weekKey) {
+            const doc = loadXmlData(weekKey, 'TaskLogs');
+            if (!doc) return [];
+            const nodes = doc.querySelectorAll('TaskLog');
+            const logs = [];
+            nodes.forEach(node => {
+                const get = (tag) => node.querySelector(tag)?.textContent?.trim() || '';
+                const id = parseInt(get('LogID')) || 0;
+                if (id === 0) return;
+                logs.push({
+                    LogID: id,
+                    TaskID: parseInt(get('TaskID')) || 0,
+                    LogDate: get('LogDate'),
+                    ActivityDescription: get('ActivityDescription'),
+                    TimeSpentHours: parseFloat(get('TimeSpentHours')) || 0,
+                    Notes: get('Notes'),
+                    _week: weekKey
+                });
+            });
+            return logs.sort((a, b) => a.LogID - b.LogID);
+        }
+
+        function getMaxLogId(weekKey) {
+            const logs = getLogs(weekKey);
+            if (logs.length === 0) return 0;
+            return Math.max(...logs.map(l => l.LogID));
+        }
+
+        function saveLogs(weekKey, logs) {
+            const doc = document.implementation.createDocument(null, 'TaskLogs', null);
+            const root = doc.documentElement;
+            logs.forEach(l => {
+                const el = doc.createElement('TaskLog');
+                ['LogID', 'TaskID', 'LogDate', 'ActivityDescription', 'TimeSpentHours', 'Notes'].forEach(field => {
+                    const child = doc.createElement(field);
+                    child.textContent = l[field] !== undefined && l[field] !== null ? String(l[field]) : '';
+                    el.appendChild(child);
+                });
+                root.appendChild(el);
+            });
+            saveXmlData(weekKey, 'TaskLogs', doc);
+        }
+
+        // ─── HELPERS ───
+        function getWeekForDate(dateStr) {
+            return getWeekKey(new Date(dateStr));
+        }
+
+        function formatDate(d) {
+            if (!d) return '';
+            const dt = new Date(d);
+            return dt.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function formatDateInput(d) {
+            if (!d) return '';
+            const dt = new Date(d);
+            return dt.toISOString().split('T')[0];
+        }
+
+        function todayStr() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        function getDayName(dateStr) {
+            const d = new Date(dateStr);
+            return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d.getDay()];
+        }
+
+        function formatMinutes(minutes) {
+            if (!minutes || minutes === 0) return '0m';
+            const hrs = Math.floor(minutes / 60);
+            const mins = Math.round(minutes % 60);
+            if (hrs === 0) return `${mins}m`;
+            if (mins === 0) return `${hrs}h`;
+            return `${hrs}h ${mins}m`;
+        }
+
+        function minutesToHours(minutes) {
+            return minutes / 60;
+        }
+
+        function getCompletionDate(task) {
+            if (task.Status !== 'Completed') return null;
+            if (task.EndDate) return new Date(task.EndDate);
+            return new Date(task.StartDate);
+        }
+
+        // ─── APP STATE ───
+        let state = {
+            currentPage: 'dashboard',
+            dashDate: todayStr(),
+            logFilterTask: '',
+            logFilterDate: '',
+            charts: {},
+            reportCharts: {}
+        };
+
+        // ─── DOM REFS ───
+        const $ = (s) => document.querySelector(s);
+        const $$ = (s) => document.querySelectorAll(s);
+
+        // ─── NAVIGATION ───
+        function navigate(page) {
+            state.currentPage = page;
+            $$('.page').forEach(el => el.classList.remove('active'));
+            const target = document.getElementById(`page-${page}`);
+            if (target) target.classList.add('active');
+            $$('.nav-tab').forEach(el => el.classList.remove('active'));
+            document.querySelector(`.nav-tab[data-page="${page}"]`)?.classList.add('active');
+
+            if (page === 'dashboard') renderDashboard();
+            if (page === 'tasks') renderTasks();
+            if (page === 'logs') renderLogs();
+            if (page === 'settings') renderSettings();
+            if (page === 'reports') renderReports();
+        }
+
+        // ─── MODAL ───
+        function openModal(title, html) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').innerHTML = html;
+            document.getElementById('modalOverlay').classList.add('open');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('open');
+        }
+
+        document.getElementById('modalClose').addEventListener('click', closeModal);
+        document.getElementById('modalOverlay').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeModal();
+        });
+
+        // ─── NAV EVENTS ───
+        $$('.nav-tab').forEach(btn => {
+            btn.addEventListener('click', () => navigate(btn.dataset.page));
+        });
+
+        // ─── RENDER DASHBOARD ───
+        function renderDashboard() {
+            const date = state.dashDate;
+            const weekKey = getWeekForDate(date);
+            ensureWeekData(weekKey);
+            const tasks = getTasks(weekKey);
+            const logs = getLogs(weekKey);
+
+            const weekStart = getWeekStart(new Date(date));
+            const weekEnd = new Date(date);
+            weekEnd.setHours(23, 59, 59, 999);
+
+            const dayLogs = logs.filter(l => l.LogDate === date);
+            const weekLogs = logs.filter(l => {
+                const ld = new Date(l.LogDate);
+                return ld >= weekStart && ld <= weekEnd;
+            });
+
+            // --- Stats Calculations ---
+            const openTasks = tasks.filter(t => t.Status !== 'Completed' && t.Status !== 'Cancelled' && t.Status !== 'Closed')
+                .length;
+            const tasksAddedToday = tasks.filter(t => t.StartDate === date).length;
+            const tasksAddedWeek = tasks.filter(t => {
+                const sd = new Date(t.StartDate);
+                return sd >= weekStart && sd <= weekEnd;
+            }).length;
+
+            const tasksCompletedToday = tasks.filter(t => {
+                if (t.Status !== 'Completed') return false;
+                const cd = getCompletionDate(t);
+                return cd && cd.toISOString().split('T')[0] === date;
+            }).length;
+            const tasksCompletedWeek = tasks.filter(t => {
+                if (t.Status !== 'Completed') return false;
+                const cd = getCompletionDate(t);
+                return cd && cd >= weekStart && cd <= weekEnd;
+            }).length;
+
+            const logsAddedToday = dayLogs.length;
+            const logsAddedWeek = weekLogs.length;
+
+            // --- Update DOM ---
+            document.getElementById('statOpenTasks').textContent = openTasks;
+            document.getElementById('statTasksAddedToday').textContent = tasksAddedToday;
+            document.getElementById('statTasksAddedWeek').textContent = tasksAddedWeek;
+            document.getElementById('statCompletedToday').textContent = tasksCompletedToday;
+            document.getElementById('statCompletedWeek').textContent = tasksCompletedWeek;
+            document.getElementById('statLogsToday').textContent = logsAddedToday;
+            document.getElementById('statLogsWeek').textContent = logsAddedWeek;
+
+            // --- Daily Activity Table ---
+            document.getElementById('dashDailyDate').textContent = formatDate(date);
+            const wrap = document.getElementById('dashDailyTableWrap');
+            if (dayLogs.length === 0) {
+                wrap.innerHTML = `<p class="text-muted" style="padding:0.5rem 0;">No activities logged on ${formatDate(date)}.</p>`;
+            } else {
+                let html =
+                    `<table><thead><tr><th>Task ID</th><th>Task</th><th>Activity</th><th>Time</th><th>Log Date</th></tr></thead><tbody>`;
+                dayLogs.forEach(l => {
+                    const task = tasks.find(t => t.TaskID === l.TaskID);
+                    html +=
+                        `<tr><td>${l.TaskID}</td><td>${task ? task.TaskDescription : 'Unknown'}</td><td>${l.ActivityDescription}</td><td>${formatMinutes(l.TimeSpentHours)}</td><td>${formatDate(l.LogDate)}</td></tr>`;
+                });
+                html += `</tbody></table>`;
+                wrap.innerHTML = html;
+            }
+
+            // --- Charts ---
+            drawHoursByTaskChart('chartHoursByTaskToday', dayLogs, tasks, 'Today');
+            drawHoursByTaskChart('chartHoursByTaskWeek', weekLogs, tasks, 'Week to Date');
+
+            // Status Distribution
+            const statusCounts = {};
+            tasks.forEach(t => { statusCounts[t.Status] = (statusCounts[t.Status] || 0) + 1; });
+            const statusLabels = Object.keys(statusCounts);
+            const statusData = Object.values(statusCounts);
+            const colors = ['#0D6EFD', '#F59E0B', '#EF4444', '#10B981', '#6B7280'];
+            updateChart('chartStatusDist', 'doughnut', statusLabels, statusData, colors, '');
+
+            // Daily Trend
+            const trendDates = [];
+            const trendValues = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(date);
+                d.setDate(d.getDate() - i);
+                const ds = d.toISOString().split('T')[0];
+                trendDates.push(formatDate(ds));
+                const dayMinutes = logs.filter(l => l.LogDate === ds).reduce((s, l) => s + l.TimeSpentHours, 0);
+                trendValues.push(minutesToHours(dayMinutes));
+            }
+            updateChart('chartDailyTrend', 'line', trendDates, trendValues, '#4A90E2', 'Hours');
+
+            // Planned vs Actual (based on week logs)
+            const planVsActual = tasks.map(t => {
+                const actualMinutes = weekLogs.filter(l => l.TaskID === t.TaskID).reduce((s, l) => s + l.TimeSpentHours,
+                0);
+                return { desc: t.TaskDescription.substring(0, 15), planned: t.EstimatedEffortHours || 0,
+                    actual: minutesToHours(actualMinutes) };
+            });
+            const pvLabels = planVsActual.map(t => t.desc);
+            const pvPlanned = planVsActual.map(t => t.planned);
+            const pvActual = planVsActual.map(t => t.actual);
+            updateChart('chartEffort', 'bar', pvLabels, [
+                { label: 'Planned', data: pvPlanned, backgroundColor: '#4A90E2' },
+                { label: 'Actual', data: pvActual, backgroundColor: '#10B981' }
+            ], '', 'Hours');
+
+            // Populate filters
+            populateFilterDropdowns(tasks);
+            document.getElementById('dashDate').value = date;
+        }
+
+        // ─── CHART HELPERS ───
+        function drawHoursByTaskChart(canvasId, logs, tasks, label) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (state.charts[canvasId]) {
+                state.charts[canvasId].destroy();
+                delete state.charts[canvasId];
+            }
+
+            const taskMinutes = {};
+            logs.forEach(l => {
+                taskMinutes[l.TaskID] = (taskMinutes[l.TaskID] || 0) + l.TimeSpentHours;
+            });
+            const sorted = Object.entries(taskMinutes).sort((a, b) => b[1] - a[1]);
+            const labels = sorted.map(([id]) => {
+                const t = tasks.find(task => task.TaskID === parseInt(id));
+                return t ? t.TaskDescription.substring(0, 15) : `Task ${id}`;
+            });
+            const dataHours = sorted.map(([, mins]) => minutesToHours(mins));
+
+            if (labels.length === 0) {
+                state.charts[canvasId] = new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels: ['No Data'], datasets: [{ data: [0], backgroundColor: '#E5E9F0' }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+                return;
+            }
+
+            state.charts[canvasId] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Hours',
+                        data: dataHours,
+                        backgroundColor: '#0D6EFD',
+                        borderRadius: 4,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f0f2f5' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function updateChart(id, type, labels, data, color, label) {
+            const canvas = document.getElementById(id);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (state.charts[id]) {
+                state.charts[id].destroy();
+                delete state.charts[id];
+            }
+            if (!labels || labels.length === 0) {
+                state.charts[id] = new Chart(ctx, {
+                    type: type,
+                    data: { labels: ['No Data'], datasets: [{ data: [0], backgroundColor: '#E5E9F0' }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+                return;
+            }
+            let datasets = [];
+            if (Array.isArray(color)) {
+                datasets = [{ data: data, backgroundColor: color, borderWidth: 0 }];
+            } else if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'object') {
+                datasets = data;
+            } else {
+                datasets = [{ label: label || 'Value', data: data, backgroundColor: color || '#0D6EFD', borderRadius: 4,
+                    borderSkipped: false }];
+            }
+            const isDoughnut = type === 'doughnut';
+            state.charts[id] = new Chart(ctx, {
+                type: type,
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: isDoughnut || datasets.length > 1,
+                            position: 'bottom',
+                            labels: { boxWidth: 12, padding: 8, font: { size: 10 } }
+                        }
+                    },
+                    scales: isDoughnut ? undefined : {
+                        y: { beginAtZero: true, grid: { color: '#f0f2f5' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function populateFilterDropdowns(tasks) {
+            const typeSelect = document.getElementById('dashTaskTypeFilter');
+            const currentType = typeSelect.value;
+            const types = [...new Set(tasks.map(t => t.TaskType).filter(Boolean))];
+            typeSelect.innerHTML = `<option value="">All Types</option>` + types.map(t =>
+                `<option value="${t}">${t}</option>`).join('');
+            typeSelect.value = currentType;
+
+            const statusSelect = document.getElementById('dashStatusFilter');
+            const currentStatus = statusSelect.value;
+            const statuses = [...new Set(tasks.map(t => t.Status).filter(Boolean))];
+            statusSelect.innerHTML = `<option value="">All Statuses</option>` + statuses.map(s =>
+                `<option value="${s}">${s}</option>`).join('');
+            statusSelect.value = currentStatus;
+        }
+
+        // ─── DASHBOARD CONTROLS ───
+        document.getElementById('dashDate').addEventListener('change', (e) => {
+            state.dashDate = e.target.value;
+            renderDashboard();
+        });
+        document.getElementById('dashPrevDay').addEventListener('click', () => {
+            const d = new Date(state.dashDate);
+            d.setDate(d.getDate() - 1);
+            state.dashDate = d.toISOString().split('T')[0];
+            renderDashboard();
+        });
+        document.getElementById('dashNextDay').addEventListener('click', () => {
+            const d = new Date(state.dashDate);
+            d.setDate(d.getDate() + 1);
+            state.dashDate = d.toISOString().split('T')[0];
+            renderDashboard();
+        });
+        document.getElementById('dashToday').addEventListener('click', () => {
+            state.dashDate = todayStr();
+            renderDashboard();
+        });
+        document.getElementById('dashRefresh').addEventListener('click', renderDashboard);
+
+        // ─── TASKS ───
+        function renderTasks() {
+            const weekKey = getCurrentWeek();
+            ensureWeekData(weekKey);
+            const allTasks = getTasks(weekKey);
+            const allLogs = getLogs(weekKey);
+
+            const showCompletedCancelled = document.getElementById('showCompletedCancelled').checked;
+            let tasks = allTasks;
+            if (!showCompletedCancelled) {
+                tasks = allTasks.filter(t => t.Status !== 'Completed' && t.Status !== 'Cancelled');
+            }
+
+            tasks.sort((a, b) => b.TaskID - a.TaskID);
+
+            const tbody = document.getElementById('taskTableBody');
+            if (tasks.length === 0) {
+                tbody.innerHTML =
+                    `<tr><td colspan="10" class="text-center text-muted" style="padding:2rem 0;">${allTasks.length === 0 ? 'No tasks yet. Create your first task!' : 'No active tasks (completed/cancelled are hidden).'}</td></tr>`;
+                return;
+            }
+            let html = '';
+            tasks.forEach(t => {
+                const statusBadge = getStatusBadge(t.Status);
+                const taskLogs = allLogs.filter(l => l.TaskID === t.TaskID);
+                const totalMinutes = taskLogs.reduce((s, l) => s + l.TimeSpentHours, 0);
+                const totalHours = minutesToHours(totalMinutes);
+                const estHours = t.EstimatedEffortHours || 0;
+
+                let percent = -1;
+                if (t.CompletePercent !== undefined && t.CompletePercent >= 0) {
+                    percent = Math.min(100, Math.round(t.CompletePercent));
+                } else {
+                    if (estHours > 0) {
+                        percent = Math.min(100, Math.round((totalHours / estHours) * 100));
+                    } else if (totalHours > 0) {
+                        percent = 100;
+                    } else {
+                        percent = 0;
+                    }
+                }
+                if (t.Status === 'Completed') percent = 100;
+                if (t.Status === 'Cancelled' || t.Status === 'Closed') percent = 0;
+
+                html += `<tr>
+              <td><strong>${t.TaskID}</strong></td>
+              <td>${t.TaskDescription}</td>
+              <td><span class="badge badge-info">${t.TaskType || '—'}</span></td>
+              <td><span class="badge ${statusBadge}">${t.Status || '—'}</span></td>
+              <td>${estHours}h</td>
+              <td>${taskLogs.length}</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <div class="progress-bar" style="width:60px;"><div class="fill ${percent === 100 ? 'complete' : ''}" style="width:${percent}%;"></div></div>
+                  <span style="font-size:0.8rem;font-weight:500;">${percent}%</span>
+                </div>
+              </td>
+              <td>${formatDate(t.StartDate)}</td>
+              <td>${t.EndDate ? formatDate(t.EndDate) : '—'}</td>
+              <td style="text-align:right;">
+                <button class="btn btn-sm btn-outline task-edit" data-id="${t.TaskID}"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-danger task-delete" data-id="${t.TaskID}"><i class="fas fa-trash-alt"></i></button>
+              </td>
+            </tr>`;
+            });
+            tbody.innerHTML = html;
+            tbody.querySelectorAll('.task-edit').forEach(btn => {
+                btn.addEventListener('click', () => editTask(parseInt(btn.dataset.id)));
+            });
+            tbody.querySelectorAll('.task-delete').forEach(btn => {
+                btn.addEventListener('click', () => deleteTask(parseInt(btn.dataset.id)));
+            });
+        }
+
+        document.getElementById('showCompletedCancelled').addEventListener('change', renderTasks);
+
+        function getStatusBadge(status) {
+            const map = {
+                'Not Started': 'badge-secondary',
+                'In Progress': 'badge-primary',
+                'Blocked': 'badge-danger',
+                'Completed': 'badge-success',
+                'Cancelled': 'badge-warning'
+            };
+            return map[status] || 'badge-secondary';
+        }
+
+        document.getElementById('taskCreateBtn').addEventListener('click', () => { showTaskForm(null); });
+
+        function showTaskForm(task) {
+            const isEdit = !!task;
+            const weekKey = getCurrentWeek();
+            ensureWeekData(weekKey);
+            const tasks = getTasks(weekKey);
+            const nextId = tasks.length > 0 ? Math.max(...tasks.map(t => t.TaskID)) + 1 : 1;
+            const statuses = config.taskStatus.map(s => `<option value="${s}" ${task && task.Status === s ? 'selected' : ''}>${s}</option>`)
+                .join('');
+            const types = config.taskTypes.map(t => `<option value="${t}" ${task && task.TaskType === t ? 'selected' : ''}>${t}</option>`)
+                .join('');
+            const currentPercent = (task && task.CompletePercent !== undefined && task.CompletePercent >= 0) ? task
+                .CompletePercent : '';
+            const html = `
+            <form id="taskForm">
+              <input type="hidden" id="tf_id" value="${task ? task.TaskID : ''}" />
+              <div class="form-group"><label class="form-label">Task ID</label><input class="form-control" value="${isEdit ? task.TaskID : nextId}" disabled style="background:#f0f2f5;" /></div>
+              <div class="form-group"><label class="form-label">Description *</label><input class="form-control" id="tf_desc" value="${task ? task.TaskDescription : ''}" required placeholder="What needs to be done?" /></div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Estimated Effort (hours) *</label><input class="form-control" id="tf_est" type="number" step="0.5" value="${task ? task.EstimatedEffortHours : ''}" required /></div>
+                <div class="form-group"><label class="form-label">Task Type</label><select class="form-control" id="tf_type">${types}</select></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Start Date *</label><input class="form-control" id="tf_start" type="date" value="${task ? formatDateInput(task.StartDate) : todayStr()}" required /></div>
+                <div class="form-group"><label class="form-label">End Date</label><input class="form-control" id="tf_end" type="date" value="${task ? formatDateInput(task.EndDate) : ''}" /></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Status</label><select class="form-control" id="tf_status">${statuses}</select></div>
+                <div class="form-group"><label class="form-label">Completion %</label><input class="form-control" id="tf_complete" type="number" min="0" max="100" step="1" value="${currentPercent}" placeholder="Auto (leave empty)" /><span style="font-size:0.75rem;color:var(--text-muted);">Leave empty to auto-calculate based on logged time</span></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Requested By</label><input class="form-control" id="tf_requested" value="${task ? task.RequestedBy : ''}" placeholder="Who requested this?" /></div>
+                <div class="form-group"><label class="form-label">Notes</label><textarea class="form-control" id="tf_notes" rows="2">${task ? task.Notes : ''}</textarea></div>
+              </div>
+              <div class="flex gap-1 mt-2">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> ${isEdit ? 'Update' : 'Create'} Task</button>
+                <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+              </div>
+            </form>
+          `;
+            openModal(isEdit ? 'Edit Task' : 'New Task', html);
+            document.getElementById('taskForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const id = isEdit ? task.TaskID : nextId;
+                const completeVal = document.getElementById('tf_complete').value.trim();
+                let completePercent = -1;
+                if (completeVal !== '') {
+                    const parsed = parseFloat(completeVal);
+                    if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
+                        completePercent = parsed;
+                    }
+                }
+                const data = {
+                    TaskID: id,
+                    TaskDescription: document.getElementById('tf_desc').value.trim(),
+                    EstimatedEffortHours: parseFloat(document.getElementById('tf_est').value) || 0,
+                    StartDate: document.getElementById('tf_start').value,
+                    EndDate: document.getElementById('tf_end').value || '',
+                    Status: document.getElementById('tf_status').value,
+                    TaskType: document.getElementById('tf_type').value,
+                    RequestedBy: document.getElementById('tf_requested').value.trim(),
+                    Notes: document.getElementById('tf_notes').value.trim(),
+                    CompletePercent: completePercent,
+                };
+                if (!data.TaskDescription) { alert('Description is required.'); return; }
+                if (!data.StartDate) { alert('Start Date is required.'); return; }
+                if (data.EstimatedEffortHours < 0) { alert('Estimated effort must be 0 or positive.'); return; }
+                const weekKey = getCurrentWeek();
+                ensureWeekData(weekKey);
+                let tasks = getTasks(weekKey);
+                if (isEdit) {
+                    const idx = tasks.findIndex(t => t.TaskID === id);
+                    if (idx !== -1) tasks[idx] = { ...data, _week: weekKey };
+                    else tasks.push({ ...data, _week: weekKey });
+                } else {
+                    tasks.push({ ...data, _week: weekKey });
+                }
+                saveTasks(weekKey, tasks);
+                closeModal();
+                renderTasks();
+                renderDashboard();
+            });
+        }
+
+        function editTask(id) {
+            const weekKey = getCurrentWeek();
+            const task = getTaskById(id, weekKey);
+            if (!task) { alert('Task not found.'); return; }
+            showTaskForm(task);
+        }
+
+        function deleteTask(id) {
+            if (!confirm('Delete this task? All associated logs will also be removed.')) return;
+            const weekKey = getCurrentWeek();
+            let tasks = getTasks(weekKey);
+            tasks = tasks.filter(t => t.TaskID !== id);
+            saveTasks(weekKey, tasks);
+            let logs = getLogs(weekKey);
+            logs = logs.filter(l => l.TaskID !== id);
+            saveLogs(weekKey, logs);
+            renderTasks();
+            renderDashboard();
+        }
+
+        // ─── LOGS ───
+        function renderLogs() {
+            const weekKey = getCurrentWeek();
+            ensureWeekData(weekKey);
+            const allLogs = getLogs(weekKey);
+            const allTasks = getTasks(weekKey);
+
+            let filtered = [...allLogs];
+            const filterTask = document.getElementById('logTaskFilter').value;
+            const filterDate = document.getElementById('logDateFilter').value;
+            if (filterTask) filtered = filtered.filter(l => l.TaskID === parseInt(filterTask));
+            if (filterDate) filtered = filtered.filter(l => l.LogDate === filterDate);
+
+            filtered.sort((a, b) => {
+                const dateA = new Date(a.LogDate);
+                const dateB = new Date(b.LogDate);
+                if (dateB - dateA !== 0) return dateB - dateA;
+                return b.LogID - a.LogID;
+            });
+
+            const taskSelect = document.getElementById('logTaskFilter');
+            const currentVal = taskSelect.value;
+            if (taskSelect.options.length <= 1 || taskSelect.dataset.populated !== 'true') {
+                taskSelect.innerHTML = `<option value="">All Tasks</option>` +
+                    allTasks.map(t => {
+                        const statusSuffix = (t.Status === 'Completed' || t.Status === 'Cancelled') ? ` (${t.Status})` :
+                            '';
+                        return `<option value="${t.TaskID}">${t.TaskID} - ${t.TaskDescription}${statusSuffix}</option>`;
+                    }).join('');
+                taskSelect.dataset.populated = 'true';
+            }
+            taskSelect.value = currentVal;
+
+            const tbody = document.getElementById('logTableBody');
+            if (filtered.length === 0) {
+                tbody.innerHTML =
+                    `<tr><td colspan="7" class="text-center text-muted" style="padding:2rem 0;">No logs found.</td></tr>`;
+                return;
+            }
+            let html = '';
+            filtered.forEach(l => {
+                const task = allTasks.find(t => t.TaskID === l.TaskID);
+                html += `<tr>
+              <td>${l.LogID}</td>
+              <td>${task ? `${task.TaskID} - ${task.TaskDescription}` : 'Unknown'}</td>
+              <td>${formatDate(l.LogDate)}</td>
+              <td>${l.ActivityDescription}</td>
+              <td>${formatMinutes(l.TimeSpentHours)}</td>
+              <td>${l.Notes || '—'}</td>
+              <td style="text-align:right;">
+                <button class="btn btn-sm btn-outline log-edit" data-id="${l.LogID}"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-danger log-delete" data-id="${l.LogID}"><i class="fas fa-trash-alt"></i></button>
+              </td>
+            </tr>`;
+            });
+            tbody.innerHTML = html;
+            tbody.querySelectorAll('.log-edit').forEach(btn => {
+                btn.addEventListener('click', () => editLog(parseInt(btn.dataset.id)));
+            });
+            tbody.querySelectorAll('.log-delete').forEach(btn => {
+                btn.addEventListener('click', () => deleteLog(parseInt(btn.dataset.id)));
+            });
+        }
+
+        document.getElementById('logTaskFilter').addEventListener('change', renderLogs);
+        document.getElementById('logDateFilter').addEventListener('change', renderLogs);
+        document.getElementById('logFilterBtn').addEventListener('click', renderLogs);
+        document.getElementById('logClearFilter').addEventListener('click', () => {
+            document.getElementById('logTaskFilter').value = '';
+            document.getElementById('logDateFilter').value = '';
+            renderLogs();
+        });
+
+        document.getElementById('logCreateBtn').addEventListener('click', () => { showLogForm(null); });
+
+        function showLogForm(log) {
+            const isEdit = !!log;
+            const weekKey = getCurrentWeek();
+            ensureWeekData(weekKey);
+            const logs = getLogs(weekKey);
+            const allTasks = getTasks(weekKey);
+            const activeTasks = allTasks.filter(t => t.Status !== 'Completed' && t.Status !== 'Cancelled');
+            const nextId = logs.length > 0 ? Math.max(...logs.map(l => l.LogID)) + 1 : 1;
+
+            let taskOptions = activeTasks.map(t =>
+                `<option value="${t.TaskID}" ${log && log.TaskID === t.TaskID ? 'selected' : ''}>${t.TaskID} - ${t.TaskDescription}</option>`
+            ).join('');
+
+            if (isEdit) {
+                const currentTask = allTasks.find(t => t.TaskID === log.TaskID);
+                if (currentTask && (currentTask.Status === 'Completed' || currentTask.Status === 'Cancelled')) {
+                    taskOptions += `<option value="${currentTask.TaskID}" selected>${currentTask.TaskID} - ${currentTask.TaskDescription} (${currentTask.Status})</option>`;
+                }
+            }
+
+            const currentMinutes = log ? log.TimeSpentHours : 0;
+            const html = `
+            <form id="logForm">
+              <input type="hidden" id="lf_id" value="${log ? log.LogID : ''}" />
+              <div class="form-group"><label class="form-label">Log ID</label><input class="form-control" value="${isEdit ? log.LogID : nextId}" disabled style="background:#f0f2f5;" /></div>
+              <div class="form-group">
+                <label class="form-label">Task *</label>
+                <select class="form-control" id="lf_task" required>
+                  <option value="">Select a task...</option>
+                  ${taskOptions}
+                </select>
+                ${isEdit && (() => { const t = allTasks.find(tt => tt.TaskID === log.TaskID); if (t && (t.Status === 'Completed' || t.Status === 'Cancelled')) return '<span style="color:#EF4444;font-size:0.8rem;">⚠️ This task is completed/cancelled. You cannot edit this log, but you can delete it.</span>'; return ''; })()}
+              </div>
+              <div class="form-group"><label class="form-label">Date *</label><input class="form-control" id="lf_date" type="date" value="${log ? formatDateInput(log.LogDate) : todayStr()}" required /></div>
+              <div class="form-group"><label class="form-label">Activity Description *</label><input class="form-control" id="lf_activity" value="${log ? log.ActivityDescription : ''}" required placeholder="What did you work on?" /></div>
+              <div class="form-group"><label class="form-label">Time Spent (minutes) *</label><input class="form-control" id="lf_minutes" type="number" step="1" min="0" value="${currentMinutes}" required placeholder="e.g. 90" /><span class="text-muted" style="font-size:0.8rem;">Enter total minutes (e.g., 1h 30m = 90)</span></div>
+              <div class="form-group"><label class="form-label">Notes</label><textarea class="form-control" id="lf_notes" rows="2">${log ? log.Notes : ''}</textarea></div>
+              <div class="flex gap-1 mt-2">
+                <button type="submit" class="btn btn-primary" id="logFormSubmit"><i class="fas fa-save"></i> ${isEdit ? 'Update' : 'Create'} Log</button>
+                <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+              </div>
+            </form>
+          `;
+            openModal(isEdit ? 'Edit Log' : 'New Log', html);
+
+            const form = document.getElementById('logForm');
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const taskId = parseInt(document.getElementById('lf_task').value);
+                const date = document.getElementById('lf_date').value;
+                const activity = document.getElementById('lf_activity').value.trim();
+                const minutes = parseInt(document.getElementById('lf_minutes').value);
+                const notes = document.getElementById('lf_notes').value.trim();
+
+                if (!taskId) { alert('Please select a task.'); return; }
+                if (!date) { alert('Date is required.'); return; }
+                if (!activity) { alert('Activity description is required.'); return; }
+                if (!minutes || minutes < 0) { alert('Please enter a valid number of minutes (0 or more).'); return; }
+
+                const selectedTask = allTasks.find(t => t.TaskID === taskId);
+                if (selectedTask && (selectedTask.Status === 'Completed' || selectedTask.Status === 'Cancelled')) {
+                    alert('You cannot log time against a task that is Completed or Cancelled.');
+                    return;
+                }
+
+                const weekKey = getCurrentWeek();
+                ensureWeekData(weekKey);
+                let logs = getLogs(weekKey);
+                const id = isEdit ? log.LogID : nextId;
+                const data = { LogID: id, TaskID: taskId, LogDate: date, ActivityDescription: activity,
+                    TimeSpentHours: minutes, Notes: notes, _week: weekKey };
+                if (isEdit) {
+                    const idx = logs.findIndex(l => l.LogID === id);
+                    if (idx !== -1) logs[idx] = data;
+                    else logs.push(data);
+                } else {
+                    logs.push(data);
+                }
+                saveLogs(weekKey, logs);
+                closeModal();
+                renderLogs();
+                renderDashboard();
+            });
+
+            if (isEdit) {
+                const currentTask = allTasks.find(t => t.TaskID === log.TaskID);
+                if (currentTask && (currentTask.Status === 'Completed' || currentTask.Status === 'Cancelled')) {
+                    document.getElementById('logFormSubmit').disabled = true;
+                    document.getElementById('logFormSubmit').title = 'Cannot edit logs for completed/cancelled tasks.';
+                }
+            }
+        }
+
+        function editLog(id) {
+            const weekKey = getCurrentWeek();
+            const log = getLogs(weekKey).find(l => l.LogID === id);
+            if (!log) { alert('Log not found.'); return; }
+            showLogForm(log);
+        }
+
+        function deleteLog(id) {
+            if (!confirm('Delete this log entry?')) return;
+            const weekKey = getCurrentWeek();
+            let logs = getLogs(weekKey);
+            logs = logs.filter(l => l.LogID !== id);
+            saveLogs(weekKey, logs);
+            renderLogs();
+            renderDashboard();
+        }
+
+        // ─── REPORTS ───
+        function renderReports() {
+            document.getElementById('reportDate').value = todayStr();
+            document.getElementById('reportStartDate').value = todayStr();
+            document.getElementById('reportEndDate').value = todayStr();
+            updateWeekRange();
+            toggleReportControls();
+            document.getElementById('reportPreview').innerHTML =
+                `<p class="text-muted">Select a period and click "Generate Report".</p>`;
+            document.getElementById('reportType').addEventListener('change', () => {
+                toggleReportControls();
+                if (document.getElementById('reportType').value === 'week') updateWeekRange();
+            });
+            document.getElementById('reportGenerateBtn').addEventListener('click', generateReport);
+            document.getElementById('reportPdfBtn').addEventListener('click', printReport);
+            document.getElementById('reportHtmlBtn').addEventListener('click', exportReportHtml);
+        }
+
+        function toggleReportControls() {
+            const type = document.getElementById('reportType').value;
+            document.getElementById('reportSingleDay').classList.toggle('hidden', type !== 'day');
+            document.getElementById('reportWeekInfo').classList.toggle('hidden', type !== 'week');
+            document.getElementById('reportCustomRange').classList.toggle('hidden', type !== 'custom');
+        }
+
+        function updateWeekRange() {
+            const today = new Date();
+            const start = getWeekStart(today);
+            const end = new Date(today);
+            const startStr = formatDate(start.toISOString().split('T')[0]);
+            const endStr = formatDate(end.toISOString().split('T')[0]);
+            document.getElementById('reportWeekRange').textContent = `${startStr} — ${endStr}`;
+        }
+
+        // ─── GENERATE REPORT ───
+        function generateReport() {
+            const type = document.getElementById('reportType').value;
+            let start, end;
+            if (type === 'day') {
+                const date = document.getElementById('reportDate').value;
+                if (!date) { alert('Please select a date.'); return; }
+                start = end = date;
+            } else if (type === 'week') {
+                const today = new Date();
+                const startDate = getWeekStart(today);
+                start = startDate.toISOString().split('T')[0];
+                end = today.toISOString().split('T')[0];
+            } else {
+                start = document.getElementById('reportStartDate').value;
+                end = document.getElementById('reportEndDate').value;
+                if (!start || !end) { alert('Please select both start and end dates.'); return; }
+                if (start > end) { alert('Start date cannot be after end date.'); return; }
+            }
+            buildReport(start, end);
+        }
+
+        // ─── BUILD REPORT ───
+        function buildReport(startDate, endDate) {
+            const allWeeks = getAllWeeks();
+            let allTasks = [];
+            let allLogs = [];
+
+            allWeeks.forEach(wk => {
+                const tasks = getTasks(wk);
+                const logs = getLogs(wk);
+                const filteredLogs = logs.filter(l => l.LogDate >= startDate && l.LogDate <= endDate);
+                const taskIds = new Set(filteredLogs.map(l => l.TaskID));
+                const filteredTasks = tasks.filter(t => taskIds.has(t.TaskID));
+                allTasks = allTasks.concat(filteredTasks);
+                allLogs = allLogs.concat(filteredLogs);
+            });
+
+            if (allLogs.length === 0) {
+                document.getElementById('reportPreview').innerHTML =
+                    `<p class="text-muted">No activities found for the selected period.</p>`;
+                return;
+            }
+
+            // --- Build report HTML (dashboard style) ---
+            const periodLabel = startDate === endDate ? formatDate(startDate) :
+                `${formatDate(startDate)} — ${formatDate(endDate)}`;
+            let html = `<div class="report-content">`;
+
+            // Title
+            html += `<div class="report-title">Activity Report</div>`;
+            html += `<div class="report-subtitle">${periodLabel}</div>`;
+
+            // Stats
+            const totalMinutes = allLogs.reduce((s, l) => s + l.TimeSpentHours, 0);
+            const totalHours = minutesToHours(totalMinutes);
+            const logCount = allLogs.length;
+            const uniqueTaskIds = new Set(allLogs.map(l => l.TaskID));
+            const tasksWithLogs = uniqueTaskIds.size;
+            const statusCounts = {};
+            allTasks.forEach(t => { statusCounts[t.Status] = (statusCounts[t.Status] || 0) + 1; });
+
+            html += `<div class="stat-grid">
+                <div class="stat-item"><div class="label">Total Hours</div><div class="value">${totalHours.toFixed(1)}h</div></div>
+                <div class="stat-item"><div class="label">Total Minutes</div><div class="value">${totalMinutes}</div></div>
+                <div class="stat-item"><div class="label">Tasks (with logs)</div><div class="value">${tasksWithLogs}</div></div>
+                <div class="stat-item"><div class="label">Log Entries</div><div class="value">${logCount}</div></div>
+                <div class="stat-item"><div class="label">Task Statuses</div><div class="value">${Object.keys(statusCounts).length}</div></div>
+              </div>`;
+
+            // Charts
+            html += `<div class="chart-row">`;
+            html += `<div class="chart-box"><canvas id="reportChartHoursByTask"></canvas></div>`;
+            html += `<div class="chart-box"><canvas id="reportChartStatusDist"></canvas></div>`;
+            html += `</div>`;
+
+            // Add daily trend and planned vs actual if range is <= 7 days or we have enough data
+            const dayDiff = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
+            if (dayDiff <= 7) {
+                html += `<div class="chart-row">`;
+                html += `<div class="chart-box"><canvas id="reportChartDailyTrend"></canvas></div>`;
+                html += `<div class="chart-box"><canvas id="reportChartEffort"></canvas></div>`;
+                html += `</div>`;
+            }
+
+            // Task Summary Table
+            html += `<h4 style="margin-top:1.5rem;">Task Summary</h4>`;
+            html += `<div class="task-summary-table"><table>
+                <thead><tr><th>Task ID</th><th>Description</th><th>Type</th><th>Status</th><th>Total Time</th><th>Logs</th></tr></thead><tbody>`;
+            const taskLogsMap = {};
+            allLogs.forEach(l => {
+                if (!taskLogsMap[l.TaskID]) taskLogsMap[l.TaskID] = [];
+                taskLogsMap[l.TaskID].push(l);
+            });
+            const sortedTaskIds = Object.keys(taskLogsMap).sort((a, b) => {
+                const sumA = taskLogsMap[a].reduce((s, l) => s + l.TimeSpentHours, 0);
+                const sumB = taskLogsMap[b].reduce((s, l) => s + l.TimeSpentHours, 0);
+                return sumB - sumA;
+            });
+            sortedTaskIds.forEach(id => {
+                const task = allTasks.find(t => t.TaskID === parseInt(id));
+                const logs = taskLogsMap[id];
+                const total = logs.reduce((s, l) => s + l.TimeSpentHours, 0);
+                const statusBadge = getStatusBadge(task ? task.Status : '');
+                html += `<tr>
+                  <td>${id}</td>
+                  <td>${task ? task.TaskDescription : 'Unknown'}</td>
+                  <td>${task ? task.TaskType || '—' : '—'}</td>
+                  <td><span class="badge ${statusBadge}">${task ? task.Status : '—'}</span></td>
+                  <td>${formatMinutes(total)}</td>
+                  <td>${logs.length}</td>
+                </tr>`;
+            });
+            html += `</tbody></table></div>`;
+
+            // Detailed Logs Table
+            html += `<h4 style="margin-top:1.5rem;">Detailed Logs</h4>`;
+            html += `<div class="task-summary-table"><table>
+                <thead><tr><th>Task</th><th>Date</th><th>Activity</th><th>Time</th><th>Notes</th></tr></thead><tbody>`;
+            allLogs.sort((a, b) => {
+                const dateA = new Date(a.LogDate);
+                const dateB = new Date(b.LogDate);
+                if (dateB - dateA !== 0) return dateB - dateA;
+                return b.LogID - a.LogID;
+            });
+            allLogs.forEach(l => {
+                const task = allTasks.find(t => t.TaskID === l.TaskID);
+                html += `<tr>
+                  <td>${task ? task.TaskDescription : 'Unknown'}</td>
+                  <td>${formatDate(l.LogDate)}</td>
+                  <td>${l.ActivityDescription}</td>
+                  <td>${formatMinutes(l.TimeSpentHours)}</td>
+                  <td>${l.Notes || '—'}</td>
+                </tr>`;
+            });
+            html += `</tbody></table></div>`;
+            html += `</div>`; // end report-content
+
+            // Insert into preview
+            document.getElementById('reportPreview').innerHTML = html;
+
+            // Draw charts
+            drawReportCharts(allLogs, allTasks, startDate, endDate);
+        }
+
+        // ─── DRAW REPORT CHARTS ───
+        function drawReportCharts(logs, tasks, startDate, endDate) {
+            // Hours by Task
+            const taskMinutes = {};
+            logs.forEach(l => {
+                taskMinutes[l.TaskID] = (taskMinutes[l.TaskID] || 0) + l.TimeSpentHours;
+            });
+            const sorted = Object.entries(taskMinutes).sort((a, b) => b[1] - a[1]);
+            const labels = sorted.map(([id]) => {
+                const t = tasks.find(t => t.TaskID === parseInt(id));
+                return t ? t.TaskDescription.substring(0, 20) : `Task ${id}`;
+            });
+            const dataHours = sorted.map(([, mins]) => minutesToHours(mins));
+            drawSingleReportChart('reportChartHoursByTask', 'bar', labels, dataHours, '#0D6EFD', 'Hours');
+
+            // Status Distribution
+            const statusCounts = {};
+            tasks.forEach(t => {
+                statusCounts[t.Status] = (statusCounts[t.Status] || 0) + 1;
+            });
+            const statusLabels = Object.keys(statusCounts);
+            const statusData = Object.values(statusCounts);
+            const colors = ['#0D6EFD', '#F59E0B', '#EF4444', '#10B981', '#6B7280'];
+            drawSingleReportChart('reportChartStatusDist', 'doughnut', statusLabels, statusData, colors, '');
+
+            // Daily Trend (if range <= 7 days)
+            const dayDiff = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
+            if (dayDiff <= 7) {
+                const trendDates = [];
+                const trendValues = [];
+                let cur = new Date(startDate);
+                const end = new Date(endDate);
+                while (cur <= end) {
+                    const ds = cur.toISOString().split('T')[0];
+                    trendDates.push(formatDate(ds));
+                    const dayMinutes = logs.filter(l => l.LogDate === ds).reduce((s, l) => s + l.TimeSpentHours, 0);
+                    trendValues.push(minutesToHours(dayMinutes));
+                    cur.setDate(cur.getDate() + 1);
+                }
+                drawSingleReportChart('reportChartDailyTrend', 'line', trendDates, trendValues, '#4A90E2', 'Hours');
+
+                // Planned vs Actual
+                const planVsActual = tasks.map(t => {
+                    const actualMinutes = logs.filter(l => l.TaskID === t.TaskID).reduce((s, l) => s + l.TimeSpentHours,
+                        0);
+                    return { desc: t.TaskDescription.substring(0, 15), planned: t.EstimatedEffortHours || 0,
+                        actual: minutesToHours(actualMinutes) };
+                });
+                const pvLabels = planVsActual.map(t => t.desc);
+                const pvPlanned = planVsActual.map(t => t.planned);
+                const pvActual = planVsActual.map(t => t.actual);
+                drawSingleReportChart('reportChartEffort', 'bar', pvLabels, [
+                    { label: 'Planned', data: pvPlanned, backgroundColor: '#4A90E2' },
+                    { label: 'Actual', data: pvActual, backgroundColor: '#10B981' }
+                ], '', 'Hours');
+            }
+        }
+
+        function drawSingleReportChart(id, type, labels, data, color, label) {
+            const canvas = document.getElementById(id);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (state.reportCharts[id]) {
+                state.reportCharts[id].destroy();
+                delete state.reportCharts[id];
+            }
+            if (!labels || labels.length === 0) {
+                state.reportCharts[id] = new Chart(ctx, {
+                    type: type,
+                    data: { labels: ['No Data'], datasets: [{ data: [0], backgroundColor: '#E5E9F0' }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                        animation: false }
+                });
+                return;
+            }
+            let datasets = [];
+            if (Array.isArray(color)) {
+                datasets = [{ data: data, backgroundColor: color, borderWidth: 0 }];
+            } else if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'object') {
+                datasets = data;
+            } else {
+                datasets = [{ label: label || 'Value', data: data, backgroundColor: color || '#0D6EFD', borderRadius: 4,
+                    borderSkipped: false }];
+            }
+            const isDoughnut = type === 'doughnut';
+            state.reportCharts[id] = new Chart(ctx, {
+                type: type,
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: {
+                        legend: {
+                            display: isDoughnut || datasets.length > 1,
+                            position: 'bottom',
+                            labels: { boxWidth: 12, padding: 8, font: { size: 10 } }
+                        }
+                    },
+                    scales: isDoughnut ? undefined : {
+                        y: { beginAtZero: true, grid: { color: '#f0f2f5' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // ─── PRINT / PDF ───
+        function printReport() {
+            const preview = document.getElementById('reportPreview');
+            const content = preview.innerHTML;
+            if (!content || content.includes('No activities found') || content.includes('Select a period')) {
+                alert('Please generate a report first.');
+                return;
+            }
+
+            // Clone and replace canvases with images
+            const clone = preview.cloneNode(true);
+            const canvases = clone.querySelectorAll('canvas');
+            canvases.forEach(canvas => {
+                try {
+                    const img = document.createElement('img');
+                    img.src = canvas.toDataURL('image/png');
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'contain';
+                    canvas.parentNode.replaceChild(img, canvas);
+                } catch (e) {
+                    // If canvas fails, just hide it
+                    canvas.style.display = 'none';
+                }
+            });
+
+            const htmlContent = clone.innerHTML;
+            const styles = document.querySelector('style').innerHTML;
+            const win = window.open('', '_blank');
+            if (!win) { alert('Please allow popups for this site.'); return; }
+
+            win.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head><title>Activity Report</title>
+            <style>
+              ${styles}
+              body { padding: 2rem; max-width: 1200px; margin: 0 auto; background: #fff; }
+              .report-preview { background: #fff; padding: 1rem; }
+              .chart-box { height: 200px; }
+              .chart-box img { width: 100%; height: 100%; object-fit: contain; }
+              .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+              .stat-item { background: #f5f9ff; padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid #e5e9f0; text-align: center; }
+              .stat-item .label { font-size: 0.7rem; text-transform: uppercase; color: #6b7280; letter-spacing: 0.3px; }
+              .stat-item .value { font-size: 1.4rem; font-weight: 700; }
+              .task-summary-table table { font-size: 0.85rem; width: 100%; border-collapse: collapse; }
+              .task-summary-table th { background: #e9edf4; text-align: left; padding: 0.5rem; border-bottom: 2px solid #d1d5db; }
+              .task-summary-table td { padding: 0.5rem; border-bottom: 1px solid #e5e9f0; }
+              .badge { display: inline-block; padding: 0.15rem 0.7rem; border-radius: 40px; font-size: 0.75rem; font-weight: 500; background: #f0f2f5; color: #1f2937; }
+              .badge-primary { background: rgba(13,110,253,0.12); color: #0D6EFD; }
+              .badge-success { background: rgba(16,185,129,0.12); color: #10B981; }
+              .badge-warning { background: rgba(245,158,11,0.12); color: #F59E0B; }
+              .badge-danger { background: rgba(239,68,68,0.12); color: #EF4444; }
+              .badge-secondary { background: #f0f2f5; color: #6b7280; }
+              .text-muted { color: #6b7280; }
+              .report-title { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.2rem; }
+              .report-subtitle { color: #6b7280; margin-bottom: 1.5rem; }
+              .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.5rem 0; }
+              @media print {
+                .chart-box { break-inside: avoid; }
+                .stat-grid { break-inside: avoid; }
+                table { break-inside: auto; }
+              }
+            </style>
+            </head>
+            <body>
+              <div class="report-preview">${htmlContent}</div>
+              <script>
+                setTimeout(() => { window.print(); }, 500);
+              <\/script>
+            </body>
+            </html>
+          `);
+            win.document.close();
+        }
+
+        // ─── HTML EXPORT ───
+        function exportReportHtml() {
+            const preview = document.getElementById('reportPreview');
+            const content = preview.innerHTML;
+            if (!content || content.includes('No activities found') || content.includes('Select a period')) {
+                alert('Please generate a report first.');
+                return;
+            }
+
+            const clone = preview.cloneNode(true);
+            const canvases = clone.querySelectorAll('canvas');
+            canvases.forEach(canvas => {
+                try {
+                    const img = document.createElement('img');
+                    img.src = canvas.toDataURL('image/png');
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'contain';
+                    canvas.parentNode.replaceChild(img, canvas);
+                } catch (e) {
+                    canvas.style.display = 'none';
+                }
+            });
+
+            const styles = document.querySelector('style').innerHTML;
+            const finalHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="UTF-8"><title>TaskFlow Report</title>
+            <style>
+              ${styles}
+              body { padding: 2rem; max-width: 1200px; margin: 0 auto; background: #fff; }
+              .report-preview { background: #fff; padding: 1rem; }
+              .chart-box { height: 200px; }
+              .chart-box img { width: 100%; height: 100%; object-fit: contain; }
+              .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+              .stat-item { background: #f5f9ff; padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid #e5e9f0; text-align: center; }
+              .stat-item .label { font-size: 0.7rem; text-transform: uppercase; color: #6b7280; letter-spacing: 0.3px; }
+              .stat-item .value { font-size: 1.4rem; font-weight: 700; }
+              .task-summary-table table { font-size: 0.85rem; width: 100%; border-collapse: collapse; }
+              .task-summary-table th { background: #e9edf4; text-align: left; padding: 0.5rem; border-bottom: 2px solid #d1d5db; }
+              .task-summary-table td { padding: 0.5rem; border-bottom: 1px solid #e5e9f0; }
+              .badge { display: inline-block; padding: 0.15rem 0.7rem; border-radius: 40px; font-size: 0.75rem; font-weight: 500; background: #f0f2f5; color: #1f2937; }
+              .badge-primary { background: rgba(13,110,253,0.12); color: #0D6EFD; }
+              .badge-success { background: rgba(16,185,129,0.12); color: #10B981; }
+              .badge-warning { background: rgba(245,158,11,0.12); color: #F59E0B; }
+              .badge-danger { background: rgba(239,68,68,0.12); color: #EF4444; }
+              .badge-secondary { background: #f0f2f5; color: #6b7280; }
+              .text-muted { color: #6b7280; }
+              .report-title { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.2rem; }
+              .report-subtitle { color: #6b7280; margin-bottom: 1.5rem; }
+              .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.5rem 0; }
+            </style>
+            </head>
+            <body>
+              <div class="report-preview">${clone.innerHTML}</div>
+            </body>
+            </html>
+          `;
+
+            const blob = new Blob([finalHtml], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `report_${todayStr()}.html`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // ─── SETTINGS ───
+        function renderSettings() {
+            renderStatusTags();
+            renderTypeTags();
+            renderWorkingHours();
+        }
+
+        function renderStatusTags() {
+            const container = document.getElementById('statusTagList');
+            container.innerHTML = config.taskStatus.map(s =>
+                `<span class="tag-item">${s} <button class="remove-tag" data-status="${s}">&times;</button></span>`
+            ).join('');
+            container.querySelectorAll('.remove-tag').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const val = btn.dataset.status;
+                    config.taskStatus = config.taskStatus.filter(s => s !== val);
+                    saveConfig();
+                    renderSettings();
+                    renderTasks();
+                    renderDashboard();
+                });
+            });
+        }
+
+        function renderTypeTags() {
+            const container = document.getElementById('typeTagList');
+            container.innerHTML = config.taskTypes.map(t =>
+                `<span class="tag-item">${t} <button class="remove-tag" data-type="${t}">&times;</button></span>`
+            ).join('');
+            container.querySelectorAll('.remove-tag').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const val = btn.dataset.type;
+                    config.taskTypes = config.taskTypes.filter(t => t !== val);
+                    saveConfig();
+                    renderSettings();
+                    renderTasks();
+                    renderDashboard();
+                });
+            });
+        }
+
+        document.getElementById('addStatusBtn').addEventListener('click', () => {
+            const input = document.getElementById('newStatusInput');
+            const val = input.value.trim();
+            if (!val) return;
+            if (config.taskStatus.includes(val)) { alert('Status already exists.'); return; }
+            config.taskStatus.push(val);
+            saveConfig();
+            input.value = '';
+            renderSettings();
+            renderTasks();
+            renderDashboard();
+        });
+
+        document.getElementById('addTypeBtn').addEventListener('click', () => {
+            const input = document.getElementById('newTypeInput');
+            const val = input.value.trim();
+            if (!val) return;
+            if (config.taskTypes.includes(val)) { alert('Type already exists.'); return; }
+            config.taskTypes.push(val);
+            saveConfig();
+            input.value = '';
+            renderSettings();
+            renderTasks();
+            renderDashboard();
+        });
+
+        document.getElementById('resetDefaultStatuses').addEventListener('click', () => {
+            config.taskStatus = [...DEFAULTS.taskStatus];
+            saveConfig();
+            renderSettings();
+            renderTasks();
+            renderDashboard();
+        });
+
+        document.getElementById('resetDefaultTypes').addEventListener('click', () => {
+            config.taskTypes = [...DEFAULTS.taskTypes];
+            saveConfig();
+            renderSettings();
+            renderTasks();
+            renderDashboard();
+        });
+
+        function renderWorkingHours() {
+            const grid = document.getElementById('workingHoursGrid');
+            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            let html = '';
+            days.forEach(day => {
+                const wh = config.workingHours[day] || { start: '', end: '' };
+                html += `
+              <div class="card" style="padding:0.8rem 1rem;">
+                <strong style="font-size:0.85rem;">${day}</strong>
+                <div class="flex gap-1" style="margin-top:0.3rem;">
+                  <input class="form-control form-control-sm" type="time" value="${wh.start || ''}" data-day="${day}" data-type="start" style="width:80px;" />
+                  <span style="color:var(--text-muted);">to</span>
+                  <input class="form-control form-control-sm" type="time" value="${wh.end || ''}" data-day="${day}" data-type="end" style="width:80px;" />
+                </div>
+              </div>
+            `;
+            });
+            grid.innerHTML = html;
+        }
+
+        document.getElementById('saveWorkingHours').addEventListener('click', () => {
+            const inputs = document.querySelectorAll('#workingHoursGrid input[type="time"]');
+            inputs.forEach(inp => {
+                const day = inp.dataset.day;
+                const type = inp.dataset.type;
+                if (!config.workingHours[day]) config.workingHours[day] = { start: '', end: '' };
+                config.workingHours[day][type] = inp.value;
+            });
+            saveConfig();
+            alert('Working hours saved!');
+        });
+
+        // ─── DATA EXPORT / IMPORT ───
+        document.getElementById('exportXmlBtn').addEventListener('click', () => {
+            const weeks = getAllWeeks();
+            if (weeks.length === 0) { alert('No data to export.'); return; }
+            let combined = `<TaskFlowData>\n`;
+            weeks.forEach(wk => {
+                const tasks = getTasks(wk);
+                const logs = getLogs(wk);
+                combined += `  <Week key="${wk}">\n`;
+                combined += `    <Tasks>\n`;
+                tasks.forEach(t => {
+                    combined += `      <Task>\n`;
+                    Object.entries(t).forEach(([k, v]) => {
+                        if (k === '_week') return;
+                        combined += `        <${k}>${v ?? ''}</${k}>\n`;
+                    });
+                    combined += `      </Task>\n`;
+                });
+                combined += `    </Tasks>\n`;
+                combined += `    <TaskLogs>\n`;
+                logs.forEach(l => {
+                    combined += `      <TaskLog>\n`;
+                    Object.entries(l).forEach(([k, v]) => {
+                        if (k === '_week') return;
+                        combined += `        <${k}>${v ?? ''}</${k}>\n`;
+                    });
+                    combined += `      </TaskLog>\n`;
+                });
+                combined += `    </TaskLogs>\n`;
+                combined += `  </Week>\n`;
+            });
+            combined += `</TaskFlowData>`;
+            const blob = new Blob([combined], { type: 'application/xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `taskflow_export_${todayStr()}.xml`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('importXmlBtn').addEventListener('click', () => {
+            document.getElementById('importXmlFile').click();
+        });
+
+        document.getElementById('importXmlFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(ev.target.result, 'text/xml');
+                    if (doc.querySelector('parsererror')) {
+                        alert('Invalid XML file.');
+                        return;
+                    }
+                    const weeks = doc.querySelectorAll('Week');
+                    weeks.forEach(wkEl => {
+                        const weekKey = wkEl.getAttribute('key');
+                        if (!weekKey) return;
+                        const taskNodes = wkEl.querySelectorAll('Tasks > Task');
+                        const tasks = [];
+                        taskNodes.forEach(tn => {
+                            const get = (tag) => tn.querySelector(tag)?.textContent?.trim() || '';
+                            const id = parseInt(get('TaskID')) || 0;
+                            if (id === 0) return;
+                            tasks.push({
+                                TaskID: id,
+                                TaskDescription: get('TaskDescription'),
+                                EstimatedEffortHours: parseFloat(get('EstimatedEffortHours')) || 0,
+                                StartDate: get('StartDate'),
+                                EndDate: get('EndDate'),
+                                Status: get('Status'),
+                                TaskType: get('TaskType'),
+                                RequestedBy: get('RequestedBy'),
+                                Notes: get('Notes'),
+                                CompletePercent: parseFloat(get('CompletePercent')) || -1,
+                                _week: weekKey
+                            });
+                        });
+                        if (tasks.length > 0) {
+                            ensureWeekData(weekKey);
+                            saveTasks(weekKey, tasks);
+                        }
+                        const logNodes = wkEl.querySelectorAll('TaskLogs > TaskLog');
+                        const logs = [];
+                        logNodes.forEach(ln => {
+                            const get = (tag) => ln.querySelector(tag)?.textContent?.trim() || '';
+                            const id = parseInt(get('LogID')) || 0;
+                            if (id === 0) return;
+                            logs.push({
+                                LogID: id,
+                                TaskID: parseInt(get('TaskID')) || 0,
+                                LogDate: get('LogDate'),
+                                ActivityDescription: get('ActivityDescription'),
+                                TimeSpentHours: parseFloat(get('TimeSpentHours')) || 0,
+                                Notes: get('Notes'),
+                                _week: weekKey
+                            });
+                        });
+                        if (logs.length > 0) {
+                            ensureWeekData(weekKey);
+                            saveLogs(weekKey, logs);
+                        }
+                    });
+                    alert('Import successful!');
+                    e.target.value = '';
+                    renderDashboard();
+                    renderTasks();
+                    renderLogs();
+                } catch (err) {
+                    alert('Error importing data: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        document.getElementById('clearAllDataBtn').addEventListener('click', () => {
+            if (!confirm('⚠️ This will permanently delete ALL data. Are you sure?')) return;
+            if (!confirm('Really? This cannot be undone.')) return;
+            const keys = Object.keys(localStorage).filter(k => k.startsWith('taskflow_'));
+            keys.forEach(k => localStorage.removeItem(k));
+            alert('All data cleared.');
+            renderDashboard();
+            renderTasks();
+            renderLogs();
+        });
+
+        // ─── INIT ───
+        function init() {
+            const weekKey = getCurrentWeek();
+            ensureWeekData(weekKey);
+            document.getElementById('dashDate').value = todayStr();
+            document.getElementById('reportDate').value = todayStr();
+            document.getElementById('reportStartDate').value = todayStr();
+            document.getElementById('reportEndDate').value = todayStr();
+            renderDashboard();
+            renderTasks();
+            renderLogs();
+            renderSettings();
+            renderReports();
+            setInterval(() => {
+                if (state.currentPage === 'dashboard') renderDashboard();
+            }, 60000);
+        }
+
+        window.closeModal = closeModal;
+        init();
+    </script>
+</body>
+</html>
